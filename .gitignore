@@ -1,4 +1,12 @@
-.env
-*.env
-.claude/settings.local.json
-node_modules/
+# Default ignored files
+/shelf/
+/.idea/workspace.xml
+# Ignored default folder with query files
+/queries/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+/.idea/
+.idea/*
