@@ -10,3 +10,8 @@
 /httpRequests/
 /.idea/
 .idea/*
+# Secrets et fichiers locaux
+.env
+*.env
+.claude/settings.local.json
+node_modules/

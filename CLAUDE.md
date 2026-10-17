@@ -35,4 +35,5 @@ W4 reste une action **simulée** : aucun vrai ordre ni paiement sans accord expl
 - **Alerte sur erreur** : chaque workflow actif référence le workflow d'erreur global (Error Trigger → notification Telegram).
 - **Git** : commits locaux uniquement ; ne jamais `git push` sans demande explicite.
 - **Secrets** : credentials uniquement dans n8n ou `.env` (ignoré par git), jamais dans les JSON de workflows exportés.
+- **Dépôt public** (`iasamir101/P0N8N`) : ne jamais y mettre l'IP ou le vrai domaine de la VM (utiliser `n8n.example.com`), ni chat id Telegram, URL de webhook, archive de sauvegarde ou export de workflow non relu. Un secret poussé par erreur se révoque, il ne s'efface pas.
 - Documenter chaque nouvelle découverte dans `docs/LEARNINGS.md` (court, orienté « ce que j'ai appris / piège évité »).

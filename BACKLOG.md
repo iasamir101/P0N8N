@@ -11,7 +11,7 @@ Statuts : `todo` · `doing` · `done` · `blocked`
 | 0.5 | 0 | Fixer le budget mensuel de tokens | todo | |
 | 1.1 | 1 | Créer la VM Oracle Always Free | done | |
 | 1.2 | 1 | Docker + n8n en compose | done | squelette dans `deploy/` |
-| 1.3 | 1 | HTTPS + auth | doing | |
+| 1.3 | 1 | HTTPS + auth | done | compte owner créé |
 | 1.4 | 1 | Sauvegarde + test de restauration | todo | |
 | 2.1 | 2 | W0 Error handler global | todo | |
 | 2.2 | 2 | Hello cron → Telegram (PC éteint) | todo | |
