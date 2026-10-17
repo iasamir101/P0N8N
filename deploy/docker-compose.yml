@@ -1,4 +1,8 @@
-# Squelette de déploiement n8n + Caddy (HTTPS). À adapter en phase 1 sur la VM Oracle.
+# n8n derrière le reverse proxy commun de la VM (dépôt P0PILOTEVM, alias réseau « n8n-app »).
+# Aucun port publié : seul le Caddy de ~/p0pilotevm/proxy écoute sur 80/443.
+# Prérequis : réseau « web » existant (docker network create web) et fichier .env (copie de .env.example).
+name: n8n
+
 services:
   n8n:
     image: docker.n8n.io/n8nio/n8n:latest   # fixer une version précise une fois validée
@@ -14,21 +18,14 @@ services:
       - EXECUTIONS_DATA_MAX_AGE=168
     volumes:
       - n8n_data:/home/node/.n8n
-    expose:
-      - "5678"
+    networks:
+      web:
+        aliases:
+          - n8n-app
 
-  caddy:
-    image: caddy:2
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-    depends_on:
-      - n8n
+networks:
+  web:
+    external: true
 
 volumes:
   n8n_data:
-  caddy_data:
