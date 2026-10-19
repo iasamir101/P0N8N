@@ -5,7 +5,7 @@ name: n8n
 
 services:
   n8n:
-    image: docker.n8n.io/n8nio/n8n:latest   # fixer une version précise une fois validée
+    image: docker.n8n.io/n8nio/n8n:2.43.7   # version figée ; mise à jour : sauvegarde, puis changer ce numéro
     restart: unless-stopped
     environment:
       - N8N_HOST=${N8N_DOMAIN}

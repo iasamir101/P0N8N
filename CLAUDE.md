@@ -11,7 +11,7 @@ Le dépôt local contient les workflows (JSON/TypeScript n8n-as-code), la config
 ## Architecture
 
 Fil rouge : suivi des cours d'actions IT (jour/semaine/mois, hausses et chutes), digest Telegram. Workflows liés par Execute Workflow :
-`Cron → W1 collecte+calcul → W2 analyste (seul appel LLM, Haiku) → W3 digest Telegram`, `W4 approbation` sur grosse chute, `W0 error handler` lié à tous, `W5` suivi des tokens. Détail dans `PLAN.md`. Les exports vont dans `workflows/` (sans secrets).
+`Cron → W1 collecte+calcul → W2 analyste (seul appel LLM, DeepSeek) → W3 digest Telegram`, `W4 approbation` sur grosse chute, `W0 error handler` lié à tous, `W5` suivi des tokens. Détail dans `PLAN.md`. Les exports vont dans `workflows/` (sans secrets).
 
 W4 reste une action **simulée** : aucun vrai ordre ni paiement sans accord explicite de l'utilisateur.
 
