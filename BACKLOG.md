@@ -19,3 +19,6 @@ Statuts : `todo` · `doing` · `done` · `blocked`
 | 3.2 | 3 | W2 Analyste (DeepSeek) + W3 Digest Telegram | done | dans W1 : IF (seuil 3 %) → HTTP Analyste → Assemble → Telegram ; les deux branches testées ; tokens dans `usage.total_tokens` |
 | 3.3 | 3 | W5 Suivi des tokens + alerte budget | done | cumul mensuel en static data dans W1 (nœud `Suivi tokens` + IF), alerte à 100 000 tokens, testée avec seuils 1 et 10 000 |
 | 4.1 | 4 | W4 Approbation (action simulée) | blocked | suspendu : problème avec la version de n8n (déclencheur « appelé par un autre workflow » introuvable) ; prévu : trigger → Telegram send-and-wait → IF → journal simulé |
+| 5.1 | 5 | W6 Agent alertes : AI Agent + modèle DeepSeek, test manuel | done | workflow séparé, AI Agent + DeepSeek Chat Model, réponse cohérente sur données de test |
+| 5.2 | 5 | W6 : un outil (historique d'un ticker) + garde-fous (3 itérations, tokens bornés) | doing | |
+| 5.3 | 5 | W6 : décision d'intégrer ou non à W1 selon coût et valeur | todo | rester déterministe si pas de gain |

@@ -1,0 +1,339 @@
+{
+  "name": "Equipe agents - Orchestrateur (squelette)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Squelette non opérationnel\nContrat attendu de `agent-runner --role <po|archi|dev|qa|ba> --workdir <dossier> [--round N]` : imprime UNE ligne JSON sur stdout :\n`{\"ok\":true,\"tokens\":1234,\"summary\":\"...\",\"verdict\":\"ok|ko\"}` (verdict seulement pour qa).\nLes échanges passent par des fichiers dans le workdir ; n8n ne transmet que des résumés.\nA REMPLACER : credential SSH, chat id Telegram, texte du brief dans `Config`.\nErreur = workflow W0 (réglage Error workflow).",
+        "height": 260,
+        "width": 520
+      },
+      "id": "c1000000-0000-4000-8000-000000000000",
+      "name": "Lisez-moi",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -320]
+    },
+    {
+      "parameters": {},
+      "id": "c1000000-0000-4000-8000-000000000001",
+      "name": "Démarrer",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const brief = 'Décrire ici la demande (ex. : application de suivi de pronostics)';\nconst requestId = 'req-' + Date.now();\nreturn [{ json: { requestId, brief, briefB64: Buffer.from(brief).toString('base64'), workdir: '/srv/agents/work/' + requestId, maxLoops: 3, budgetTokens: 200000, paused: false, loop: 0, tokens: 0 } }];"
+      },
+      "id": "c1000000-0000-4000-8000-000000000002",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            { "id": "d1000000-0000-4000-8000-000000000001", "leftValue": "={{ $json.paused }}", "rightValue": "", "operator": { "type": "boolean", "operation": "true", "singleValue": true } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1000000-0000-4000-8000-000000000003",
+      "name": "Pause globale ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "REMPLACER_PAR_TON_CHAT_ID",
+        "text": "⏸ Equipe agents : pause globale active, aucune demande lancée.",
+        "additionalFields": {}
+      },
+      "id": "c1000000-0000-4000-8000-000000000004",
+      "name": "Notif pause",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [660, -140]
+    },
+    {
+      "parameters": {
+        "command": "={{ 'mkdir -p ' + $json.workdir + ' && echo ' + $json.briefB64 + ' | base64 -d > ' + $json.workdir + '/brief.md && agent-runner --role po --workdir ' + $json.workdir }}"
+      },
+      "id": "c1000000-0000-4000-8000-000000000005",
+      "name": "Agent PO",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [660, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const st = $('Config').first().json;\nlet out; try { out = JSON.parse($input.first().json.stdout); } catch (e) { throw new Error('Sortie agent PO illisible'); }\nif (!out.ok) throw new Error('Agent PO en échec : ' + (out.error || 'inconnu'));\nconst tokens = st.tokens + (out.tokens || 0);\nif (tokens > st.budgetTokens) throw new Error('Budget tokens dépassé : ' + tokens);\nreturn [{ json: { ...st, tokens, po: out.summary || '' } }];"
+      },
+      "id": "c1000000-0000-4000-8000-000000000006",
+      "name": "Lire PO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 60]
+    },
+    {
+      "parameters": {
+        "command": "={{ 'agent-runner --role archi --workdir ' + $json.workdir }}"
+      },
+      "id": "c1000000-0000-4000-8000-000000000007",
+      "name": "Agent Archi",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [1100, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const st = $('Lire PO').first().json;\nlet out; try { out = JSON.parse($input.first().json.stdout); } catch (e) { throw new Error('Sortie agent Archi illisible'); }\nif (!out.ok) throw new Error('Agent Archi en échec : ' + (out.error || 'inconnu'));\nconst tokens = st.tokens + (out.tokens || 0);\nif (tokens > st.budgetTokens) throw new Error('Budget tokens dépassé : ' + tokens);\nreturn [{ json: { ...st, tokens, archi: out.summary || '' } }];"
+      },
+      "id": "c1000000-0000-4000-8000-000000000008",
+      "name": "Lire Archi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 60]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendAndWait",
+        "chatId": "REMPLACER_PAR_TON_CHAT_ID",
+        "message": "={{ '✋ Validation architecture (' + $json.requestId + ')\\n' + $json.archi + '\\nTokens : ' + $json.tokens }}",
+        "approvalOptions": { "values": { "approvalType": "double", "approveLabel": "Approuver", "disapproveLabel": "Refuser" } },
+        "options": { "limitWaitTime": { "values": { "resumeAmount": 24, "resumeUnit": "hours" } } }
+      },
+      "id": "c1000000-0000-4000-8000-000000000009",
+      "name": "Valider architecture",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1540, 60]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            { "id": "d1000000-0000-4000-8000-000000000002", "leftValue": "={{ $json.data.approved }}", "rightValue": "", "operator": { "type": "boolean", "operation": "true", "singleValue": true } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1000000-0000-4000-8000-00000000000a",
+      "name": "Architecture approuvée ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1760, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const st = $input.first().json;\nconst base = st.requestId ? st : $('Lire Archi').first().json;\nreturn [{ json: base }];"
+      },
+      "id": "c1000000-0000-4000-8000-00000000000b",
+      "name": "Préparer Dev",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 0]
+    },
+    {
+      "parameters": {
+        "command": "={{ 'agent-runner --role dev --workdir ' + $json.workdir + ' --round ' + ($json.loop + 1) }}"
+      },
+      "id": "c1000000-0000-4000-8000-00000000000c",
+      "name": "Agent Dev",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [2200, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const st = $('Préparer Dev').first().json;\nlet out; try { out = JSON.parse($input.first().json.stdout); } catch (e) { throw new Error('Sortie agent Dev illisible'); }\nif (!out.ok) throw new Error('Agent Dev en échec : ' + (out.error || 'inconnu'));\nconst tokens = st.tokens + (out.tokens || 0);\nif (tokens > st.budgetTokens) throw new Error('Budget tokens dépassé : ' + tokens);\nreturn [{ json: { ...st, tokens, dev: out.summary || '' } }];"
+      },
+      "id": "c1000000-0000-4000-8000-00000000000d",
+      "name": "Lire Dev",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2420, 0]
+    },
+    {
+      "parameters": {
+        "command": "={{ 'agent-runner --role qa --workdir ' + $json.workdir + ' --round ' + ($json.loop + 1) }}"
+      },
+      "id": "c1000000-0000-4000-8000-00000000000e",
+      "name": "Agent QA",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [2640, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const st = $('Lire Dev').first().json;\nlet out; try { out = JSON.parse($input.first().json.stdout); } catch (e) { throw new Error('Sortie agent QA illisible'); }\nif (!out.ok) throw new Error('Agent QA en échec : ' + (out.error || 'inconnu'));\nconst tokens = st.tokens + (out.tokens || 0);\nif (tokens > st.budgetTokens) throw new Error('Budget tokens dépassé : ' + tokens);\nconst qaOk = out.verdict === 'ok';\nreturn [{ json: { ...st, tokens, qa: out.summary || '', qaOk, loop: qaOk ? st.loop : st.loop + 1 } }];"
+      },
+      "id": "c1000000-0000-4000-8000-00000000000f",
+      "name": "Lire QA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2860, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            { "id": "d1000000-0000-4000-8000-000000000003", "leftValue": "={{ $json.qaOk }}", "rightValue": "", "operator": { "type": "boolean", "operation": "true", "singleValue": true } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1000000-0000-4000-8000-000000000010",
+      "name": "QA OK ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [3080, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            { "id": "d1000000-0000-4000-8000-000000000004", "leftValue": "={{ $json.loop < $json.maxLoops }}", "rightValue": "", "operator": { "type": "boolean", "operation": "true", "singleValue": true } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1000000-0000-4000-8000-000000000011",
+      "name": "Encore un tour ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [3300, 160]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "REMPLACER_PAR_TON_CHAT_ID",
+        "text": "={{ '⚠️ Equipe agents (' + $json.requestId + ') : QA toujours en échec après ' + $json.maxLoops + ' tours, intervention humaine requise.\\n' + $json.qa }}",
+        "additionalFields": {}
+      },
+      "id": "c1000000-0000-4000-8000-000000000012",
+      "name": "Notif escalade",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [3520, 260]
+    },
+    {
+      "parameters": {
+        "command": "={{ 'agent-runner --role ba --workdir ' + $json.workdir }}"
+      },
+      "id": "c1000000-0000-4000-8000-000000000013",
+      "name": "Agent BA",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [3300, -100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const st = $('Lire QA').first().json;\nlet out; try { out = JSON.parse($input.first().json.stdout); } catch (e) { throw new Error('Sortie agent BA illisible'); }\nif (!out.ok) throw new Error('Agent BA en échec : ' + (out.error || 'inconnu'));\nconst tokens = st.tokens + (out.tokens || 0);\nif (tokens > st.budgetTokens) throw new Error('Budget tokens dépassé : ' + tokens);\nreturn [{ json: { ...st, tokens, ba: out.summary || '' } }];"
+      },
+      "id": "c1000000-0000-4000-8000-000000000014",
+      "name": "Lire BA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3520, -100]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendAndWait",
+        "chatId": "REMPLACER_PAR_TON_CHAT_ID",
+        "message": "={{ '✋ Validation livraison (' + $json.requestId + ')\\n' + $json.ba + '\\nTokens : ' + $json.tokens }}",
+        "approvalOptions": { "values": { "approvalType": "double", "approveLabel": "Approuver", "disapproveLabel": "Refuser" } },
+        "options": { "limitWaitTime": { "values": { "resumeAmount": 24, "resumeUnit": "hours" } } }
+      },
+      "id": "c1000000-0000-4000-8000-000000000015",
+      "name": "Valider livraison",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [3740, -100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            { "id": "d1000000-0000-4000-8000-000000000005", "leftValue": "={{ $json.data.approved }}", "rightValue": "", "operator": { "type": "boolean", "operation": "true", "singleValue": true } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1000000-0000-4000-8000-000000000016",
+      "name": "Livraison approuvée ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [3960, -100]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "REMPLACER_PAR_TON_CHAT_ID",
+        "text": "={{ '✅ Equipe agents terminée (' + $('Lire BA').first().json.requestId + '), tokens : ' + $('Lire BA').first().json.tokens }}",
+        "additionalFields": {}
+      },
+      "id": "c1000000-0000-4000-8000-000000000017",
+      "name": "Notif terminé",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [4180, -200]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "REMPLACER_PAR_TON_CHAT_ID",
+        "text": "🛑 Equipe agents : validation refusée ou expirée, rien n'a été livré.",
+        "additionalFields": {}
+      },
+      "id": "c1000000-0000-4000-8000-000000000018",
+      "name": "Notif refus",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1980, 160]
+    }
+  ],
+  "connections": {
+    "Démarrer": { "main": [ [ { "node": "Config", "type": "main", "index": 0 } ] ] },
+    "Config": { "main": [ [ { "node": "Pause globale ?", "type": "main", "index": 0 } ] ] },
+    "Pause globale ?": { "main": [ [ { "node": "Notif pause", "type": "main", "index": 0 } ], [ { "node": "Agent PO", "type": "main", "index": 0 } ] ] },
+    "Agent PO": { "main": [ [ { "node": "Lire PO", "type": "main", "index": 0 } ] ] },
+    "Lire PO": { "main": [ [ { "node": "Agent Archi", "type": "main", "index": 0 } ] ] },
+    "Agent Archi": { "main": [ [ { "node": "Lire Archi", "type": "main", "index": 0 } ] ] },
+    "Lire Archi": { "main": [ [ { "node": "Valider architecture", "type": "main", "index": 0 } ] ] },
+    "Valider architecture": { "main": [ [ { "node": "Architecture approuvée ?", "type": "main", "index": 0 } ] ] },
+    "Architecture approuvée ?": { "main": [ [ { "node": "Préparer Dev", "type": "main", "index": 0 } ], [ { "node": "Notif refus", "type": "main", "index": 0 } ] ] },
+    "Préparer Dev": { "main": [ [ { "node": "Agent Dev", "type": "main", "index": 0 } ] ] },
+    "Agent Dev": { "main": [ [ { "node": "Lire Dev", "type": "main", "index": 0 } ] ] },
+    "Lire Dev": { "main": [ [ { "node": "Agent QA", "type": "main", "index": 0 } ] ] },
+    "Agent QA": { "main": [ [ { "node": "Lire QA", "type": "main", "index": 0 } ] ] },
+    "Lire QA": { "main": [ [ { "node": "QA OK ?", "type": "main", "index": 0 } ] ] },
+    "QA OK ?": { "main": [ [ { "node": "Agent BA", "type": "main", "index": 0 } ], [ { "node": "Encore un tour ?", "type": "main", "index": 0 } ] ] },
+    "Encore un tour ?": { "main": [ [ { "node": "Préparer Dev", "type": "main", "index": 0 } ], [ { "node": "Notif escalade", "type": "main", "index": 0 } ] ] },
+    "Agent BA": { "main": [ [ { "node": "Lire BA", "type": "main", "index": 0 } ] ] },
+    "Lire BA": { "main": [ [ { "node": "Valider livraison", "type": "main", "index": 0 } ] ] },
+    "Valider livraison": { "main": [ [ { "node": "Livraison approuvée ?", "type": "main", "index": 0 } ] ] },
+    "Livraison approuvée ?": { "main": [ [ { "node": "Notif terminé", "type": "main", "index": 0 } ], [ { "node": "Notif refus", "type": "main", "index": 0 } ] ] }
+  },
+  "settings": { "executionOrder": "v1", "timezone": "Europe/Paris" }
+}
